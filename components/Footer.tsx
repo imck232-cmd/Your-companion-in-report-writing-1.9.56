@@ -25,6 +25,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="mt-8 py-6 text-center text-gray-600" style={{ backgroundColor: 'var(--color-card-bg)', color: 'var(--color-text)', borderTop: '1px solid var(--color-card-border)'}}>
       <div className="container mx-auto">
+        <p className="text-sm font-semibold mb-3">{t('preparedBy')}</p>
         <div className="flex justify-center items-center flex-col gap-4 mb-3">
              <a 
                 href="https://wa.me/967780804012" 
@@ -34,7 +35,7 @@ const Footer: React.FC = () => {
                 aria-label={t('contactWhatsApp')}
             >
                 <WhatsAppIcon />
-                <span>+967 780 804 012</span>
+                <span>{t('contactWhatsApp')}</span>
             </a>
             <button
                 onClick={handleUpdate}

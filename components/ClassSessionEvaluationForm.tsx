@@ -61,12 +61,14 @@ const SyllabusStatusDisplay: React.FC<SyllabusStatusDisplayProps> = ({ syllabusP
             display = <span className="text-green-600 font-semibold">{t('syllabusStatus_match')}</span>;
         } else if (difference > 0) {
             status = 'ahead';
-            const unit = difference === 1 ? t('syllabusStatus_unit') : t('syllabusStatus_units');
+            // FIX: Corrected translation key from 'syllabusStatus_units' to 'syllabusStatus_unit_plural'.
+            const unit = difference === 1 ? t('syllabusStatus_unit') : t('syllabusStatus_unit_plural');
             display = <span className="text-blue-600 font-semibold">{t('syllabusStatus_ahead')} {difference} {unit}</span>;
         } else {
             status = 'behind';
             const absDifference = Math.abs(difference);
-            const unit = absDifference === 1 ? t('syllabusStatus_unit') : t('syllabusStatus_units');
+            // FIX: Corrected translation key from 'syllabusStatus_units' to 'syllabusStatus_unit_plural'.
+            const unit = absDifference === 1 ? t('syllabusStatus_unit') : t('syllabusStatus_unit_plural');
             display = <span className="text-red-600 font-semibold">{t('syllabusStatus_behind')} {absDifference} {unit}</span>;
         }
 

@@ -6,9 +6,37 @@ export const INITIAL_SCHOOLS: School[] = [
     { id: 'school-2', name: 'مدارس عمان الأهلية' },
 ];
 
+// Define permissions for Admins who have access to everything EXCEPT User Management (Special Codes)
+const ADMIN_PERMISSIONS_NO_USERS: Permission[] = [
+    'change_school',
+    'view_supervisory_plan',
+    'view_task_plan',
+    'view_supervisory_tools',
+    'view_meeting_minutes',
+    'view_school_calendar',
+    'view_peer_visits',
+    'view_delivery_records',
+    'view_teachers',
+    'add_teacher',
+    'edit_teacher',
+    'delete_teacher',
+    'view_reports_for_specific_teachers',
+    'create_general_report',
+    'create_class_session_report',
+    'create_special_report',
+    'delete_report',
+    'view_syllabus',
+    'view_bulk_message',
+    'view_aggregated_reports',
+    'view_performance_dashboard',
+    'view_special_reports_admin',
+    'manage_criteria',
+    'view_syllabus_coverage'
+];
+
 // --- New: Initial Users with Main Admin ---
 export const INITIAL_USERS: User[] = [
-    // --- Group A: Full Access Admins ---
+    // --- Group A: Super Admin (Full Access including Codes) ---
     {
         id: 'admin-01',
         name: 'إبراهيم دخان',
@@ -16,29 +44,31 @@ export const INITIAL_USERS: User[] = [
         permissions: ['all'],
         managedTeacherIds: []
     },
+
+    // --- Group B: Admins (Full Access EXCEPT Special Codes) ---
     {
         id: 'admin-02',
         name: 'مجيب الرحمن الأحلسي',
         code: '1a2s3',
-        permissions: ['all'],
+        permissions: ADMIN_PERMISSIONS_NO_USERS,
         managedTeacherIds: []
     },
     {
         id: 'admin-03',
         name: 'وداد الشرعبي',
         code: '4a5s6',
-        permissions: ['all'],
+        permissions: ADMIN_PERMISSIONS_NO_USERS,
         managedTeacherIds: []
     },
     {
         id: 'admin-04',
         name: 'صالح الرفاعي',
         code: '7a8s9',
-        permissions: ['all'],
+        permissions: ADMIN_PERMISSIONS_NO_USERS,
         managedTeacherIds: []
     },
 
-    // --- Group B: Self Evaluation Only Teachers (Code: 1122025) ---
+    // --- Group C: Self Evaluation Only Teachers (Code: 1122025) ---
     { id: 't-user-01', name: 'وجدان العزي', code: '1122025', permissions: ['create_self_evaluation'], managedTeacherIds: [] },
     { id: 't-user-02', name: 'محمد الدريهم', code: '1122025', permissions: ['create_self_evaluation'], managedTeacherIds: [] },
     { id: 't-user-03', name: 'عبد الرؤوف الوصابي', code: '1122025', permissions: ['create_self_evaluation'], managedTeacherIds: [] },

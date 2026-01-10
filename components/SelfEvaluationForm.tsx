@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { SelfEvaluationReport, Teacher, SyllabusPlan } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -16,10 +15,10 @@ interface SelfEvaluationFormProps {
     initialReport?: SelfEvaluationReport;
 }
 
-const inputClass = "w-full bg-transparent outline-none border-none p-0 text-right";
+const inputClass = "w-full bg-transparent outline-none border-b border-gray-300 focus:border-primary p-1 text-right";
 const LabeledInputWrapper: React.FC<{label: string, children: React.ReactNode, className?: string}> = ({ label, children, className }) => (
     <div className={`flex items-center w-full p-2 border rounded focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition bg-inherit ${className}`}>
-        <span className="pl-2 rtl:pr-0 rtl:pl-2 text-gray-500 text-sm whitespace-nowrap">{label}</span>
+        <span className="pl-2 rtl:pr-0 rtl:pl-2 text-gray-500 text-sm whitespace-nowrap font-bold">{label}</span>
         {children}
     </div>
 );
@@ -40,8 +39,8 @@ const SelfEvaluationForm: React.FC<SelfEvaluationFormProps> = ({ teacher, onSave
         semester: 'الأول',
         academicYear: academicYear,
         
-        lastLessons: [{ branch: '', lesson: '' }],
-        syllabusStatus: 'match',
+        lastLessons: [{ branch: '', lesson: '', status: 'match', count: 0 }],
+        syllabusStatus: 'match', // Kept for backward compatibility but not used in UI
         syllabusLessonCount: 0,
         developmentalMeetingsCount: 0,
         notebookCorrectionPercentage: 100,
@@ -78,13 +77,13 @@ const SelfEvaluationForm: React.FC<SelfEvaluationFormProps> = ({ teacher, onSave
     const handleAddLessonField = () => {
         setFormData(prev => ({
             ...prev,
-            lastLessons: [...prev.lastLessons, { branch: '', lesson: '' }]
+            lastLessons: [...prev.lastLessons, { branch: '', lesson: '', status: 'match', count: 0 }]
         }));
     };
 
-    const handleLessonChange = (index: number, field: 'branch' | 'lesson', value: string) => {
+    const handleLessonChange = (index: number, field: 'branch' | 'lesson' | 'status' | 'count', value: string | number) => {
         const newLessons = [...formData.lastLessons];
-        newLessons[index] = { ...newLessons[index], [field]: value };
+        (newLessons[index] as any)[field] = value;
         setFormData(prev => ({ ...prev, lastLessons: newLessons }));
     };
 
@@ -100,13 +99,13 @@ const SelfEvaluationForm: React.FC<SelfEvaluationFormProps> = ({ teacher, onSave
                 <button onClick={onCancel} className="text-gray-500 hover:text-gray-700">&times; {t('cancel')}</button>
             </div>
 
-            {/* --- Header Data --- */}
+            {/* --- Header Data (All Editable) --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-gray-50">
                 <LabeledInputWrapper label={t('schoolNameLabel')}>
-                    <input type="text" value={formData.school} readOnly className={inputClass} />
+                    <input type="text" name="school" value={formData.school} onChange={handleInputChange} className={inputClass} />
                 </LabeledInputWrapper>
                 <LabeledInputWrapper label={t('academicYear')}>
-                    <input type="text" value={formData.academicYear} readOnly className={inputClass} />
+                    <input type="text" name="academicYear" value={formData.academicYear} onChange={handleInputChange} className={inputClass} />
                 </LabeledInputWrapper>
                 <LabeledInputWrapper label={t('semesterLabel')}>
                     <select name="semester" value={formData.semester} onChange={handleInputChange} className={`${inputClass} appearance-none`}>
@@ -115,7 +114,7 @@ const SelfEvaluationForm: React.FC<SelfEvaluationFormProps> = ({ teacher, onSave
                     </select>
                 </LabeledInputWrapper>
                 <LabeledInputWrapper label={t('teacherName')}>
-                    <input type="text" value={teacher.name} readOnly className={inputClass} />
+                    <input type="text" value={teacher.name} readOnly className={`${inputClass} bg-gray-100 text-gray-600`} />
                 </LabeledInputWrapper>
                 <LabeledInputWrapper label={t('subjectLabel')}>
                     <input type="text" name="subject" value={formData.subject} onChange={handleInputChange} className={inputClass} />
@@ -137,59 +136,56 @@ const SelfEvaluationForm: React.FC<SelfEvaluationFormProps> = ({ teacher, onSave
 
             {/* --- Syllabus Tracking --- */}
             <div className="p-4 border rounded-lg space-y-4">
-                <h3 className="font-bold text-lg text-primary border-b pb-2">{t('lastLessonTaken')}</h3>
-                <div className="space-y-2">
+                <h3 className="font-bold text-lg text-primary border-b pb-2">{t('lastLessonTaken')} & {t('syllabusStatusLabel')}</h3>
+                <div className="space-y-4">
                     {formData.lastLessons.map((lesson, index) => (
-                        <div key={index} className="flex gap-2 items-center">
+                        <div key={index} className="flex flex-col md:flex-row gap-2 items-center border-b pb-2">
                             <input 
                                 type="text" 
                                 placeholder={t('lessonBranchPlaceholder')} 
                                 value={lesson.branch} 
                                 onChange={e => handleLessonChange(index, 'branch', e.target.value)} 
-                                className="border p-2 rounded w-1/3"
+                                className="border p-2 rounded w-full md:w-1/4"
                             />
                             <input 
                                 type="text" 
                                 placeholder={t('lessonNamePlaceholder')} 
                                 value={lesson.lesson} 
                                 onChange={e => handleLessonChange(index, 'lesson', e.target.value)} 
-                                className="border p-2 rounded flex-grow"
+                                className="border p-2 rounded w-full md:w-1/3"
                             />
+                            
+                            {/* Status and Count per lesson */}
+                            <div className="flex gap-2 items-center flex-grow">
+                                <select 
+                                    value={lesson.status} 
+                                    onChange={e => handleLessonChange(index, 'status', e.target.value)} 
+                                    className="border p-2 rounded bg-white"
+                                >
+                                    <option value="match">{t('matchMinistryPlan')}</option>
+                                    <option value="ahead">{t('aheadMinistryPlan')}</option>
+                                    <option value="behind">{t('behindMinistryPlan')}</option>
+                                </select>
+                                {(lesson.status === 'ahead' || lesson.status === 'behind') && (
+                                    <>
+                                        <input 
+                                            type="number" 
+                                            min="1" 
+                                            value={lesson.count || ''} 
+                                            onChange={e => handleLessonChange(index, 'count', parseInt(e.target.value) || 0)} 
+                                            className="border p-2 rounded w-16 text-center" 
+                                        />
+                                        <span className="text-sm">{t('lessons')}</span>
+                                    </>
+                                )}
+                            </div>
+
                             {formData.lastLessons.length > 1 && (
                                 <button onClick={() => handleRemoveLessonField(index)} className="text-red-500 font-bold px-2">X</button>
                             )}
                         </div>
                     ))}
                     <button onClick={handleAddLessonField} className="text-sm text-blue-600 hover:underline">+ {t('addLessonField')}</button>
-                </div>
-
-                <h3 className="font-bold text-lg text-primary border-b pb-2 mt-6">{t('syllabusStatusLabel')}</h3>
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="syllabusStatus" value="match" checked={formData.syllabusStatus === 'match'} onChange={handleInputChange} />
-                        {t('matchMinistryPlan')}
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="syllabusStatus" value="ahead" checked={formData.syllabusStatus === 'ahead'} onChange={handleInputChange} />
-                        {t('aheadMinistryPlan')}
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="syllabusStatus" value="behind" checked={formData.syllabusStatus === 'behind'} onChange={handleInputChange} />
-                        {t('behindMinistryPlan')}
-                    </label>
-                    
-                    {(formData.syllabusStatus === 'ahead' || formData.syllabusStatus === 'behind') && (
-                        <div className="flex items-center gap-2">
-                            <input 
-                                type="number" 
-                                min="1" 
-                                value={formData.syllabusLessonCount || ''} 
-                                onChange={e => handleNumberChange('syllabusLessonCount', e.target.value)} 
-                                className="border p-1 rounded w-16 text-center" 
-                            />
-                            <span>{t('lessons')}</span>
-                        </div>
-                    )}
                 </div>
             </div>
 

@@ -224,6 +224,7 @@ const TaskPlan: React.FC<TaskPlanProps> = ({ tasks, setTasks }) => {
         setIsLoading(true);
         setError('');
         try {
+            // FIX: Always use a named parameter `apiKey` when initializing GoogleGenAI client instance.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             const prompt = `
                 Analyze the following plan text. For each task, extract its description, type(s), and due date(s).
@@ -237,12 +238,16 @@ const TaskPlan: React.FC<TaskPlanProps> = ({ tasks, setTasks }) => {
                 ${planText}
                 ---
             `;
+            // FIX: Use 'gemini-3-flash-preview' for basic text tasks. Use ai.models.generateContent to query GenAI.
             const response: GenerateContentResponse = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3-flash-preview',
                 contents: prompt,
                 config: { responseMimeType: "application/json" }
             });
-            const jsonString = response.text.trim();
+            // FIX: Use response.text property to extract text output from GenerateContentResponse.
+            const jsonString = (response.text || '').trim();
+            if (!jsonString) throw new Error("Received an empty response from AI.");
+            
             const parsedTasks = JSON.parse(jsonString);
             if (Array.isArray(parsedTasks)) {
                 const newTasks: Task[] = parsedTasks.map(item => ({

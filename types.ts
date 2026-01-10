@@ -157,9 +157,17 @@ export interface SpecialReport extends BaseReport {
 // --- New: Self Evaluation Report ---
 export interface SelfEvaluationReport extends BaseReport {
     evaluationType: 'self_evaluation';
-    lastLessons: { branch: string; lesson: string }[];
-    syllabusStatus: 'match' | 'ahead' | 'behind';
-    syllabusLessonCount?: number; // How many lessons ahead or behind
+    // Updated: lastLessons now includes status and count per lesson
+    lastLessons: { 
+        branch: string; 
+        lesson: string;
+        status: 'match' | 'ahead' | 'behind';
+        count?: number; 
+    }[];
+    // Removed legacy global fields if no longer needed, keeping for potential backward compat but not used in new UI
+    syllabusStatus?: 'match' | 'ahead' | 'behind'; 
+    syllabusLessonCount?: number; 
+
     developmentalMeetingsCount: number;
     notebookCorrectionPercentage: number;
     preparationBookPercentage: number;

@@ -42,6 +42,7 @@ const SyllabusPlanner: React.FC<SyllabusPlannerProps> = ({ syllabusPlans, saveSy
         setIsLoading(true);
         setError('');
         try {
+            // FIX: Always use a named parameter `apiKey` when initializing GoogleGenAI client instance.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             const prompt = `
                 Analyze the following syllabus text. Extract each lesson title and its planned date.
@@ -56,14 +57,17 @@ const SyllabusPlanner: React.FC<SyllabusPlannerProps> = ({ syllabusPlans, saveSy
                 Respond ONLY with the JSON array.
             `;
 
+            // FIX: Use ai.models.generateContent to query GenAI with 'gemini-3-flash-preview'.
             const response: GenerateContentResponse = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3-flash-preview',
                 contents: prompt,
                  config: {
                     responseMimeType: "application/json",
                 }
             });
-            const text = response.text;
+            // FIX: Use response.text property to extract output string.
+            const text = response.text || '';
+            if (!text) throw new Error("Received an empty response from AI.");
             
             const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
             const parsedLessons = JSON.parse(jsonString);

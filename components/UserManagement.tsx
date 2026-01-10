@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, Teacher, Permission } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,17 +23,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ allTeachers }) => {
     const generateUniqueCode = async (): Promise<string> => {
         setIsLoading(true);
         try {
+            // FIX: Always use a named parameter `apiKey` when initializing GoogleGenAI client instance.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             const existingCodes = users.map(u => u.code);
             const prompt = `Generate a unique 4-digit numeric code that is not sequential and not in this list: [${existingCodes.join(', ')}]. Respond ONLY with the 4-digit code.`;
             
             let attempts = 0;
             while(attempts < 5) {
+                // FIX: Use ai.models.generateContent to query GenAI.
                 const response: GenerateContentResponse = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
+                    model: 'gemini-3-flash-preview',
                     contents: prompt,
                 });
 
+                // FIX: Use response.text property to extract string output. Do not call .text().
                 const text = response.text?.trim().match(/\d{4}/)?.[0]; // Extract first 4-digit number
                 if (text && !existingCodes.includes(text)) {
                     setIsLoading(false);

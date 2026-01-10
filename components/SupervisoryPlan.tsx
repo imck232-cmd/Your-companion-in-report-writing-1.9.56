@@ -238,6 +238,7 @@ const SinglePlanView: React.FC<SinglePlanViewProps> = ({ planWrapper, onUpdate, 
         if (!importText.trim()) return;
         setIsAnalyzing(true);
         try {
+            // FIX: Always use a named parameter `apiKey` when initializing GoogleGenAI client instance.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             const prompt = `
                 Analyze the following supervisory plan text. Extract the data and map it to a JSON array with objects matching this structure.
@@ -251,8 +252,17 @@ const SinglePlanView: React.FC<SinglePlanViewProps> = ({ planWrapper, onUpdate, 
                 ${importText}
                 ---
             `;
-            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { responseMimeType: 'application/json' }});
-            const parsedData = JSON.parse(response.text);
+            // FIX: Use ai.models.generateContent to query GenAI with 'gemini-3-flash-preview'.
+            const response = await ai.models.generateContent({ 
+                model: 'gemini-3-flash-preview', 
+                contents: prompt, 
+                config: { responseMimeType: 'application/json' }
+            });
+            // FIX: Extract text output using response.text property. Added null check.
+            const responseText = response.text;
+            if (!responseText) throw new Error("Empty response from AI.");
+            
+            const parsedData = JSON.parse(responseText);
             
             if (Array.isArray(parsedData)) {
                 const newPlanData: SupervisoryPlan = planData.map((existingEntry, index) => {

@@ -47,6 +47,7 @@ const ImportDataSection: React.FC<ImportDataSectionProps> = ({ onDataParsed, for
         setError('');
 
         try {
+            // FIX: Always use a named parameter `apiKey` when initializing GoogleGenAI client instance.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             const prompt = `
                 You are an expert data extraction assistant for teacher evaluations. Analyze the following report text and populate the provided JSON structure with the extracted information.
@@ -69,14 +70,16 @@ const ImportDataSection: React.FC<ImportDataSectionProps> = ({ onDataParsed, for
                 ---
             `;
             
+            // FIX: Use 'gemini-3-flash-preview' for basic text extraction tasks. Use ai.models.generateContent to query GenAI.
             const response: GenerateContentResponse = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3-flash-preview',
                 contents: prompt,
                  config: {
                     responseMimeType: "application/json",
                 }
             });
 
+            // FIX: Use response.text property (not a method) to get generated text. Added null check.
             const responseText = response.text?.trim();
             if (!responseText) {
                 throw new Error("Received an empty response from the AI.");

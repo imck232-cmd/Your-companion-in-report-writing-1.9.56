@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { THEMES } from '../constants';
+import DataManagementModal from './DataManagementModal';
 
 interface HeaderProps {
     currentTheme: string;
@@ -16,20 +17,27 @@ const ThemeIcon: React.FC = () => (
     </svg>
 );
 
+const DatabaseIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+    </svg>
+);
+
 
 const Header: React.FC<HeaderProps> = ({ currentTheme, setTheme, selectedSchool, onChangeSchool }) => {
   const { t, language, toggleLanguage } = useLanguage();
-  const { academicYear, logout, hasPermission } = useAuth();
+  const { academicYear, logout, hasPermission, currentUser } = useAuth();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [showDataManagement, setShowDataManagement] = useState(false);
 
   return (
     <header className="bg-header-bg text-header-text shadow-lg" style={{ backgroundColor: 'var(--color-header-bg)', color: 'var(--color-header-text)' }}>
       <div className="container mx-auto px-6 py-4 flex flex-col items-center gap-4">
         <div className="text-center">
           <h1 className="text-3xl md:text-4xl font-bold">{t('appTitle')}</h1>
-          {selectedSchool && <p className="mt-2 text-gray-200" style={{ opacity: 0.9 }}>{t('currentSchool')}: <span className="font-bold">{selectedSchool}</span></p>}
+          {currentUser && <p className="mt-2 font-bold text-yellow-300">{t('welcomeUser')} {currentUser.name}</p>}
+          {selectedSchool && <p className="mt-1 text-gray-200" style={{ opacity: 0.9 }}>{t('currentSchool')}: <span className="font-bold">{selectedSchool}</span></p>}
           {academicYear && <p className="mt-1 text-sm text-gray-200" style={{ opacity: 0.9 }}>{t('academicYear')}: <span className="font-bold">{academicYear}</span></p>}
-          <p className="mt-1 text-sm text-gray-300" style={{ opacity: 0.8 }}>{t('preparedBy')}</p>
         </div>
 
         <div className="flex flex-wrap justify-center items-center gap-2 relative">
@@ -48,6 +56,17 @@ const Header: React.FC<HeaderProps> = ({ currentTheme, setTheme, selectedSchool,
             >
                 {t('toggleLanguage')}
             </button>
+            
+            {hasPermission('all') && (
+                <button
+                    onClick={() => setShowDataManagement(true)}
+                    className="p-2 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white transition-all duration-300 transform hover:scale-110 shadow-md"
+                    title={t('dataManagement')}
+                >
+                    <DatabaseIcon />
+                </button>
+            )}
+
             <div className="relative">
                 <button
                     onClick={() => setShowThemeMenu(!showThemeMenu)}
@@ -87,6 +106,7 @@ const Header: React.FC<HeaderProps> = ({ currentTheme, setTheme, selectedSchool,
             </button>
         </div>
       </div>
+      {showDataManagement && <DataManagementModal onClose={() => setShowDataManagement(false)} />}
     </header>
   );
 };
