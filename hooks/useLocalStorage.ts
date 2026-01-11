@@ -8,13 +8,16 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
     }
     try {
       const item = window.localStorage.getItem(key);
-      if (!item) return initialValue;
+      if (!item || item === 'undefined' || item === 'null') return initialValue;
       
       const parsed = JSON.parse(item);
-      // تأكد من أن البيانات تطابق النوع المتوقع (مصفوفة إذا كانت القيمة الابتدائية مصفوفة)
+      
+      // حماية صارمة: إذا كنا نتوقع مصفوفة وحصلنا على شيء آخر، نرجع المصفوفة الابتدائية فوراً
       if (Array.isArray(initialValue) && !Array.isArray(parsed)) {
+        console.warn(`LocalStorage Key "${key}" expected Array but got something else. Resetting to initialValue.`);
         return initialValue;
       }
+      
       return parsed;
     } catch (error) {
       console.error(`Error loading localStorage key "${key}":`, error);
