@@ -56,7 +56,7 @@ export const translations = {
     adminUsersDescription: "هؤلاء المستخدمون لديهم كامل الصلاحية في استخدام البرنامج.",
     teacherUsersDescription: "هؤلاء المستخدمون لديهم صلاحية استخدام زر التقييم الذاتي فقط.",
 
-    // Data Management (NEW & UPDATED)
+    // Data Management
     dataManagement: "إدارة ونقل البيانات",
     exportData: "تصدير البيانات (Backup)",
     importData: "دمج واستيراد (Smart Merge)",
@@ -68,8 +68,12 @@ export const translations = {
     confirmFullExport: "سيتم إنشاء ملف يحتوي على كافة بياناتك الحالية.",
     enterSourceName: "يرجى إدخال اسمك (سيظهر للمستلم كمصدر للبيانات):",
     importConfirmTitle: "تأكيد دمج البيانات الذكي",
-    importConfirmMsg: "تم العثور على بيانات مرسلة من: {user}. تاريخ التصدير: {date}. سيتم إضافة العناصر الجديدة فقط ولن يتم المساس ببياناتك الحالية المعدلة. هل تود المتابعة؟",
-    importSuccess: "تم دمج البيانات الجديدة بنجاح! تم الاحتفاظ بنسخة احتياطية من حالتك السابقة.",
+    importConfirmMsg: "تم العثور على بيانات مرسلة من: {user}. تاريخ التصدير: {date}. يرجى اختيار طريقة الاستيراد:",
+    importModeReplace: "استبدال شامل (أرشفة بياناتي الحالية واستخدام بيانات الملف فقط)",
+    importModeAppend: "دمج ذكي (إضافة العناصر الجديدة فقط والحفاظ على بياناتي الحالية)",
+    importModeReplaceWarning: "سيتم مسح بياناتك الحالية واستبدالها ببيانات الملف، وسيتم حفظ نسخة احتياطية تلقائية.",
+    importModeAppendWarning: "لن يتم تغيير أي بيانات تملكها حالياً، سيتم فقط إضافة المعلمين والتقارير الجديدة.",
+    importSuccess: "تمت العملية بنجاح! تم الاحتفاظ بنسخة احتياطية من حالتك السابقة.",
     importError: "الملف غير صالح أو تالف.",
     backupCreated: "تم إنشاء نسخة احتياطية تلقائية (Backup # {n})",
     noFileSelected: "يرجى اختيار ملف JSON أولاً.",
@@ -77,7 +81,7 @@ export const translations = {
     selectSchool: "اختر المدرسة",
     selectWorkType: "اختر نوع العمل",
 
-    // ... (rest of the translations keys stay the same)
+    // ... rest of keys
     permission_all: "كل الصلاحيات (مشرف عام)",
     permission_manage_users: "إدارة المستخدمين",
     permission_change_school: "تغيير المدرسة",
@@ -375,7 +379,7 @@ export const translations = {
     filters: "الفلاتر",
   },
   en: {
-     // ... (en translations stay minimal as requested)
+    // ... (keep en as is)
     appTitle: "Your Companion in Writing Reports",
     currentSchool: "Current School",
     academicYear: "Academic Year",

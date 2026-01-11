@@ -25,6 +25,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
     const [isImporting, setIsImporting] = useState(false);
     
     const [pendingImport, setPendingImport] = useState<ExportPackage | null>(null);
+    const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
 
     const teachers = useMemo(() => {
         try { return JSON.parse(localStorage.getItem('teachers') || '[]'); } catch { return []; }
@@ -41,12 +42,19 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
         { id: 'self_evaluation', label: t('selfEvaluation') }
     ];
 
+    const keysToManage = [
+        'teachers', 'reports', 'schools', 'customCriteria', 'specialReportTemplates', 
+        'syllabusPlans', 'tasks', 'meetings', 'peerVisits', 'deliverySheets', 
+        'bulkMessages', 'syllabusCoverageReports', 'supervisoryPlans', 'hiddenCriteria', 
+        'bookmarkedReportIds'
+    ];
+
     // --- Backup Logic (FIFO - Limit 5) ---
     const createBackup = () => {
         const currentData: Record<string, any> = {};
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && !key.startsWith('backup_')) {
+            if (key && !key.startsWith('backup_') && !key.startsWith('dm_')) {
                 try { currentData[key] = JSON.parse(localStorage.getItem(key) || 'null'); } 
                 catch { currentData[key] = localStorage.getItem(key); }
             }
@@ -62,7 +70,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             data: currentData 
         });
 
-        if (history.length > 5) history.shift(); // Remove oldest
+        if (history.length > 5) history.shift(); 
         localStorage.setItem('backup_history', JSON.stringify(history));
     };
 
@@ -72,9 +80,8 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
         if (!sourceName) return;
 
         const payload: Record<string, any> = {};
-        const keysToExport = ['teachers', 'reports', 'schools', 'customCriteria', 'specialReportTemplates', 'syllabusPlans', 'tasks', 'meetings', 'peerVisits', 'deliverySheets', 'bulkMessages', 'syllabusCoverageReports', 'supervisoryPlans', 'hiddenCriteria'];
 
-        keysToExport.forEach(key => {
+        keysToManage.forEach(key => {
             let data;
             try { data = JSON.parse(localStorage.getItem(key) || '[]'); } catch { return; }
 
@@ -83,7 +90,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             } else if (exportType === 'teacher' && selectedTeacherId) {
                 if (key === 'teachers') payload[key] = data.filter((t: any) => t.id === selectedTeacherId);
                 else if (key === 'reports') payload[key] = data.filter((r: any) => r.teacherId === selectedTeacherId);
-                else payload[key] = data; // Keep global configs
+                else payload[key] = data;
             } else if (exportType === 'school' && selectedSchoolName) {
                 if (key === 'teachers') payload[key] = data.filter((t: any) => t.schoolName === selectedSchoolName);
                 else if (key === 'reports') payload[key] = data.filter((r: any) => r.school === selectedSchoolName);
@@ -99,7 +106,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             sourceUser: sourceName,
             timestamp: Date.now(),
             payload: payload,
-            formatVersion: "2.0"
+            formatVersion: "2.1"
         };
 
         const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
@@ -111,7 +118,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
         URL.revokeObjectURL(url);
     };
 
-    // --- Import Fix & Logic ---
+    // --- Import Logic ---
     const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -121,14 +128,11 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             try {
                 const content = e.target?.result as string;
                 if (!content) throw new Error("File is empty");
-                
                 const parsed = JSON.parse(content);
                 
-                // Detect format: New Wrapped or Old Raw
                 if (parsed.payload && parsed.sourceUser) {
                     setPendingImport(parsed);
                 } else {
-                    // Convert legacy raw backup to new format for processing
                     setPendingImport({
                         sourceUser: "نسخة قديمة",
                         timestamp: Date.now(),
@@ -141,51 +145,48 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                 alert(t('importError'));
             }
         };
-        reader.onerror = () => alert(t('importError'));
         reader.readAsText(file);
     };
 
-    const executeSmartMerge = () => {
+    const executeImport = () => {
         if (!pendingImport) return;
         
-        const confirmMsg = t('importConfirmMsg')
-            .replace('{user}', pendingImport.sourceUser)
-            .replace('{date}', new Date(pendingImport.timestamp).toLocaleString());
-
-        if (!window.confirm(confirmMsg)) return;
-
         setIsImporting(true);
         try {
-            // 1. Create Safety Backup
+            // 1. Always Backup first
             createBackup();
 
-            // 2. Selective Merge
-            Object.entries(pendingImport.payload).forEach(([key, importedValue]) => {
-                const localRaw = localStorage.getItem(key);
-                let localValue: any;
-                try { localValue = localRaw ? JSON.parse(localRaw) : null; } catch { localValue = localRaw; }
-
-                if (Array.isArray(importedValue)) {
-                    const localItems = Array.isArray(localValue) ? localValue : [];
-                    const localIds = new Set(localItems.map((item: any) => item.id).filter(Boolean));
-                    
-                    // CRITICAL: Filter out items whose ID already exists locally (Safe Append)
-                    const newUniqueItems = importedValue.filter((item: any) => 
-                        item && item.id && !localIds.has(item.id)
-                    );
-                    
-                    const merged = [...localItems, ...newUniqueItems];
-                    localStorage.setItem(key, JSON.stringify(merged));
-                } else if (localValue === null || localValue === undefined) {
-                    // For single objects (settings), only fill if currently empty
+            if (importMode === 'replace') {
+                // Archive and Replace Mode
+                Object.entries(pendingImport.payload).forEach(([key, importedValue]) => {
                     localStorage.setItem(key, JSON.stringify(importedValue));
-                }
-            });
+                });
+            } else {
+                // Selective Merge Mode
+                Object.entries(pendingImport.payload).forEach(([key, importedValue]) => {
+                    const localRaw = localStorage.getItem(key);
+                    let localValue: any;
+                    try { localValue = localRaw ? JSON.parse(localRaw) : null; } catch { localValue = localRaw; }
+
+                    if (Array.isArray(importedValue)) {
+                        const localItems = Array.isArray(localValue) ? localValue : [];
+                        const localIds = new Set(localItems.map((item: any) => item.id).filter(Boolean));
+                        
+                        const newUniqueItems = importedValue.filter((item: any) => 
+                            item && item.id && !localIds.has(item.id)
+                        );
+                        
+                        localStorage.setItem(key, JSON.stringify([...localItems, ...newUniqueItems]));
+                    } else if (localValue === null || localValue === undefined) {
+                        localStorage.setItem(key, JSON.stringify(importedValue));
+                    }
+                });
+            }
 
             alert(t('importSuccess'));
             window.location.reload();
         } catch (err) {
-            console.error("Merge Process Error:", err);
+            console.error("Import Error:", err);
             alert(t('importError'));
         } finally {
             setIsImporting(false);
@@ -194,13 +195,13 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-fadeIn">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden animate-fadeIn">
                 
                 {/* Header */}
                 <div className="flex justify-between items-center border-b p-6 bg-gray-50">
                     <div>
                         <h2 className="text-2xl font-bold text-primary">{t('dataManagement')}</h2>
-                        <p className="text-xs text-gray-500 mt-1">تصدير ذكي ودمج آمن (Smart Selective Merge)</p>
+                        <p className="text-xs text-gray-500 mt-1">تصدير ذكي ونظام أرشفة آمن</p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-full">
                         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -273,26 +274,56 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                                 <div className="flex flex-col items-center pointer-events-none">
                                     <svg className="w-12 h-12 text-indigo-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                                     <p className="mt-4 font-bold text-indigo-800">{t('importFile')}</p>
-                                    <p className="text-[10px] text-indigo-500 mt-1">سيتم تجاهل العناصر المكررة وإضافة الجديد فقط (Safe Merge)</p>
+                                    <p className="text-[10px] text-indigo-500 mt-1">يدعم الاستبدال الشامل أو الدمج التكميلي</p>
                                 </div>
                             </div>
                         ) : (
-                            <div className="p-5 bg-indigo-50 border-2 border-indigo-200 rounded-2xl animate-fadeIn space-y-4 shadow-inner">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-white rounded-full text-indigo-600 shadow-sm"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>
+                            <div className="p-5 bg-indigo-50 border-2 border-indigo-200 rounded-2xl animate-fadeIn space-y-6">
+                                <div className="flex items-center gap-4 bg-white/50 p-3 rounded-xl border border-indigo-100">
+                                    <div className="p-3 bg-indigo-100 rounded-full text-indigo-600 shadow-sm"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>
                                     <div className="flex-grow">
                                         <p className="text-sm font-bold text-indigo-900">مصدر الملف: {pendingImport.sourceUser}</p>
                                         <p className="text-[10px] text-indigo-600">التاريخ: {new Date(pendingImport.timestamp).toLocaleString()}</p>
                                     </div>
                                     <button onClick={() => setPendingImport(null)} className="text-indigo-400 hover:text-red-500 p-1"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
                                 </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-xs font-bold text-indigo-800 px-1">تحديد وضع الاستيراد:</p>
+                                    <div 
+                                        onClick={() => setImportMode('append')}
+                                        className={`p-4 border-2 rounded-xl cursor-pointer transition flex items-start gap-3 ${importMode === 'append' ? 'border-indigo-600 bg-indigo-100/50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-200'}`}
+                                    >
+                                        <div className={`mt-1 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${importMode === 'append' ? 'border-indigo-600' : 'border-gray-300'}`}>
+                                            {importMode === 'append' && <div className="w-2.5 h-2.5 bg-indigo-600 rounded-full"></div>}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-indigo-900">{t('importModeAppend')}</p>
+                                            <p className="text-[10px] text-indigo-600 mt-1">{t('importModeAppendWarning')}</p>
+                                        </div>
+                                    </div>
+
+                                    <div 
+                                        onClick={() => setImportMode('replace')}
+                                        className={`p-4 border-2 rounded-xl cursor-pointer transition flex items-start gap-3 ${importMode === 'replace' ? 'border-red-500 bg-red-50 shadow-sm' : 'border-gray-200 bg-white hover:border-red-200'}`}
+                                    >
+                                        <div className={`mt-1 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${importMode === 'replace' ? 'border-red-500' : 'border-gray-300'}`}>
+                                            {importMode === 'replace' && <div className="w-2.5 h-2.5 bg-red-500 rounded-full"></div>}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-red-800">{t('importModeReplace')}</p>
+                                            <p className="text-[10px] text-red-600 mt-1">{t('importModeReplaceWarning')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <button 
-                                    onClick={executeSmartMerge}
+                                    onClick={executeImport}
                                     disabled={isImporting}
-                                    className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 shadow-lg flex items-center justify-center gap-3 transition transform active:scale-95 disabled:bg-gray-400"
+                                    className={`w-full font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 transition transform active:scale-95 disabled:bg-gray-400 ${importMode === 'replace' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                                 >
                                     {isImporting ? <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 11l3 3L22 4m-2 12v4a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>}
-                                    بدء الدمج الذكي للبيانات
+                                    {importMode === 'replace' ? 'تنفيذ الاستبدال الشامل' : 'تنفيذ الدمج الذكي'}
                                 </button>
                             </div>
                         )}
@@ -300,7 +331,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                 </div>
 
                 <div className="border-t p-4 bg-gray-50 flex justify-between items-center px-6">
-                    <p className="text-[10px] text-gray-400">سياسة الأمان: يتم الاحتفاظ بآخر 5 نسخ احتياطية تلقائياً قبل أي دمج.</p>
+                    <p className="text-[10px] text-gray-400">نظام الأرشفة مفعل: يتم الاحتفاظ بآخر 5 نسخ احتياطية تلقائياً.</p>
                     <button onClick={onClose} className="px-6 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition text-sm">{t('cancel')}</button>
                 </div>
             </div>
