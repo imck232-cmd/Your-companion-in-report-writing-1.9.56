@@ -83,7 +83,10 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
 
         keysToManage.forEach(key => {
             let data;
-            try { data = JSON.parse(localStorage.getItem(key) || '[]'); } catch { return; }
+            try { 
+                const raw = localStorage.getItem(key);
+                data = raw ? JSON.parse(raw) : []; 
+            } catch { data = []; }
 
             if (exportType === 'full') {
                 payload[key] = data;
@@ -133,8 +136,9 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                 if (parsed.payload && parsed.sourceUser) {
                     setPendingImport(parsed);
                 } else {
+                    // تحويل النسق القديم لنفس معالجة النسق الجديد
                     setPendingImport({
-                        sourceUser: "نسخة قديمة",
+                        sourceUser: "نسخة احتياطية سابقة",
                         timestamp: Date.now(),
                         payload: parsed,
                         formatVersion: "1.0-legacy"
@@ -153,43 +157,55 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
         
         setIsImporting(true);
         try {
-            // 1. Always Backup first
+            // 1. أخذ نسخة احتياطية للسلامة
             createBackup();
 
+            // 2. معالجة البيانات
+            const payload = pendingImport.payload;
+
             if (importMode === 'replace') {
-                // Archive and Replace Mode
-                Object.entries(pendingImport.payload).forEach(([key, importedValue]) => {
-                    localStorage.setItem(key, JSON.stringify(importedValue));
+                // وضع الاستبدال: نقوم بمسح المفاتيح المدارة فقط مع حماية بيانات الدخول
+                keysToManage.forEach(key => {
+                    if (payload[key]) {
+                        // التحقق من صحة المصفوفات لمنع انهيار الواجهة
+                        const valueToSave = Array.isArray(payload[key]) ? payload[key] : (typeof payload[key] === 'object' ? payload[key] : []);
+                        localStorage.setItem(key, JSON.stringify(valueToSave));
+                    }
                 });
             } else {
-                // Selective Merge Mode
-                Object.entries(pendingImport.payload).forEach(([key, importedValue]) => {
+                // وضع الدمج التكميلي
+                Object.entries(payload).forEach(([key, importedValue]) => {
+                    if (!keysToManage.includes(key)) return; // تجاهل أي مفاتيح غير رسمية
+
                     const localRaw = localStorage.getItem(key);
                     let localValue: any;
-                    try { localValue = localRaw ? JSON.parse(localRaw) : null; } catch { localValue = localRaw; }
+                    try { localValue = localRaw ? JSON.parse(localRaw) : null; } catch { localValue = null; }
 
                     if (Array.isArray(importedValue)) {
                         const localItems = Array.isArray(localValue) ? localValue : [];
-                        const localIds = new Set(localItems.map((item: any) => item.id).filter(Boolean));
+                        const localIds = new Set(localItems.map((item: any) => item?.id).filter(Boolean));
                         
+                        // إضافة العناصر ذات المعرفات الجديدة فقط
                         const newUniqueItems = importedValue.filter((item: any) => 
                             item && item.id && !localIds.has(item.id)
                         );
                         
                         localStorage.setItem(key, JSON.stringify([...localItems, ...newUniqueItems]));
                     } else if (localValue === null || localValue === undefined) {
+                        // للإعدادات المفردة: تعبئتها فقط إذا كانت فارغة محلياً
                         localStorage.setItem(key, JSON.stringify(importedValue));
                     }
                 });
             }
 
-            alert(t('importSuccess'));
-            window.location.reload();
-        } catch (err) {
-            console.error("Import Error:", err);
-            alert(t('importError'));
-        } finally {
             setIsImporting(false);
+            alert(t('importSuccess'));
+            // إعادة التشغيل لتطبيق الحالة الجديدة بالكامل
+            window.location.href = window.location.origin + window.location.pathname;
+        } catch (err) {
+            console.error("Import Execution Error:", err);
+            setIsImporting(false);
+            alert(t('importError'));
         }
     };
 

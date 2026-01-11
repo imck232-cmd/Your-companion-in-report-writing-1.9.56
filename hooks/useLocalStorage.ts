@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
@@ -7,9 +8,16 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
     }
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      if (!item) return initialValue;
+      
+      const parsed = JSON.parse(item);
+      // تأكد من أن البيانات تطابق النوع المتوقع (مصفوفة إذا كانت القيمة الابتدائية مصفوفة)
+      if (Array.isArray(initialValue) && !Array.isArray(parsed)) {
+        return initialValue;
+      }
+      return parsed;
     } catch (error) {
-      console.error(error);
+      console.error(`Error loading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
@@ -20,7 +28,7 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
         window.localStorage.setItem(key, JSON.stringify(storedValue));
       }
     } catch (error) {
-      console.error(error);
+      console.error(`Error saving localStorage key "${key}":`, error);
     }
   }, [key, storedValue]);
 
