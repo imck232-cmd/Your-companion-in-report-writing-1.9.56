@@ -117,14 +117,14 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             sourceUser: sourceName,
             timestamp: Date.now(),
             payload: payload,
-            formatVersion: "2.4"
+            formatVersion: "2.5"
         };
 
         const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `Rafiq_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        link.download = `Rafiq_Data_${new Date().toISOString().split('T')[0]}.json`;
         link.click();
         URL.revokeObjectURL(url);
     };
@@ -143,10 +143,10 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                     setPendingImport(parsed);
                 } else {
                     setPendingImport({
-                        sourceUser: "بيانات مستوردة",
+                        sourceUser: "ملف خارجي / نسخة متصفح",
                         timestamp: Date.now(),
                         payload: parsed,
-                        formatVersion: "legacy"
+                        formatVersion: "raw-legacy"
                     });
                 }
             } catch (err) {
@@ -164,31 +164,42 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             createBackup();
             const payload = pendingImport.payload;
 
-            if (importMode === 'replace') {
-                // وضع الاستبدال الشامل:
-                // 1. استيراد المدارس أولاً
-                if (payload['schools'] && Array.isArray(payload['schools'])) {
-                    localStorage.setItem('schools', JSON.stringify(payload['schools']));
-                    // مزامنة المدرسة النشطة مع أول مدرسة في الملف لضمان ظهور المعلمين
-                    if (payload['schools'].length > 0) {
-                        localStorage.setItem('selectedSchool', JSON.stringify(payload['schools'][0].name));
+            const processValue = (val: any) => {
+                if (typeof val === 'string') {
+                    try {
+                        const inner = JSON.parse(val);
+                        return Array.isArray(inner) ? inner : (inner === null ? [] : inner);
+                    } catch {
+                        return [];
                     }
                 }
+                return Array.isArray(val) ? val : (val === null ? [] : val);
+            };
 
-                // 2. استيراد المعلمين وبقية البيانات
+            if (importMode === 'replace') {
+                // وضع الاستبدال الشامل
                 keysToManage.forEach(key => {
-                    if (key === 'schools') return; // تم معالجتها
-                    if (payload[key]) {
-                        const sanitized = Array.isArray(payload[key]) ? payload[key] : [];
-                        // حماية: لا تمسح المعلمين إذا كان الملف المستورد فارغاً منهم تماماً
-                        if (key === 'teachers' && sanitized.length === 0) return;
-                        localStorage.setItem(key, JSON.stringify(sanitized));
+                    if (payload[key] !== undefined) {
+                        const data = processValue(payload[key]);
+                        
+                        // معالجة خاصة للمدارس لتحديث المدرسة المختارة
+                        if (key === 'schools' && Array.isArray(data) && data.length > 0) {
+                            localStorage.setItem('selectedSchool', JSON.stringify(data[0].name));
+                        }
+
+                        // حماية: لا تمسح المعلمين إذا كان الملف المستورد فارغاً
+                        if (key === 'teachers' && (!Array.isArray(data) || data.length === 0)) return;
+
+                        localStorage.setItem(key, JSON.stringify(data));
                     }
                 });
             } else {
-                // وضع الدمج الذكي (Append): الحفاظ على الأسماء الحالية وإضافة الجديد
-                Object.entries(payload).forEach(([key, importedValue]) => {
+                // وضع الدمج الذكي (Append)
+                Object.entries(payload).forEach(([key, rawImportedValue]) => {
                     if (!keysToManage.includes(key)) return;
+
+                    const importedValue = processValue(rawImportedValue);
+                    if (!Array.isArray(importedValue)) return;
 
                     const localRaw = localStorage.getItem(key);
                     let localValue: any[];
@@ -198,7 +209,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                         localValue = []; 
                     }
 
-                    if (Array.isArray(importedValue)) {
+                    if (Array.isArray(localValue)) {
                         const localIds = new Set(localValue.map((item: any) => item?.id).filter(Boolean));
                         const localNames = (key === 'teachers') ? new Set(localValue.map((item: any) => item?.name?.trim()).filter(Boolean)) : new Set();
                         
@@ -216,7 +227,6 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
 
             setIsImporting(false);
             alert(t('importSuccess'));
-            // إعادة التشغيل القسري لتحديث كافة مراجع الـ State في React
             window.location.reload();
         } catch (err) {
             console.error("Critical Import Error:", err);
@@ -232,7 +242,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                 <div className="flex justify-between items-center border-b p-6 bg-gray-50">
                     <div>
                         <h2 className="text-2xl font-bold text-primary">{t('dataManagement')}</h2>
-                        <p className="text-xs text-gray-500 mt-1">نظام الاستبعاد الذكي ومزامنة القوائم</p>
+                        <p className="text-xs text-gray-500 mt-1">نظام الاستبعاد الذكي ومعالجة البيانات المشفرة</p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-full">
                         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -303,7 +313,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                                 <div className="flex flex-col items-center pointer-events-none">
                                     <svg className="w-12 h-12 text-indigo-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                                     <p className="mt-4 font-bold text-indigo-800">{t('importFile')}</p>
-                                    <p className="text-[10px] text-indigo-500 mt-1">المعلمون المضافون مسبقاً يتم استبعادهم ذكياً لمنع التكرار</p>
+                                    <p className="text-[10px] text-indigo-500 mt-1">يدعم فك تشفير نصوص JSON التلقائي للملفات المرفقة</p>
                                 </div>
                             </div>
                         ) : (
@@ -352,7 +362,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                                     className={`w-full font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 transition transform active:scale-95 disabled:bg-gray-400 ${importMode === 'replace' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                                 >
                                     {isImporting ? <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 11l3 3L22 4m-2 12v4a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>}
-                                    {importMode === 'replace' ? 'تنفيذ الاستبدال الشامل والمزامنة' : 'تنفيذ الدمج والتحقق من الأسماء'}
+                                    {importMode === 'replace' ? 'تنفيذ الاستبدال الشامل والمزامنة' : 'تنفيذ الدمج ومعالجة النصوص'}
                                 </button>
                             </div>
                         )}
@@ -360,7 +370,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                 </div>
 
                 <div className="border-t p-4 bg-gray-50 flex justify-between items-center px-6">
-                    <p className="text-[10px] text-gray-400">تنبيه: سيتم تحديث قائمة المدارس والمدرسين فور انتهاء العملية.</p>
+                    <p className="text-[10px] text-gray-400">نظام الأرشفة: سيتم الاحتفاظ بنسخة احتياطية قبل أي تعديل.</p>
                     <button onClick={onClose} className="px-6 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition text-sm">{t('cancel')}</button>
                 </div>
             </div>
