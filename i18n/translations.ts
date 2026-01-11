@@ -1,5 +1,7 @@
+
 export const translations = {
   ar: {
+    // ... (keep existing translations)
     // App & Auth
     appTitle: "رفيقك في كتابة التقارير",
     currentSchool: "المدرسة الحالية",
@@ -54,26 +56,28 @@ export const translations = {
     adminUsersDescription: "هؤلاء المستخدمون لديهم كامل الصلاحية في استخدام البرنامج.",
     teacherUsersDescription: "هؤلاء المستخدمون لديهم صلاحية استخدام زر التقييم الذاتي فقط.",
 
-    // Data Management
+    // Data Management (NEW & UPDATED)
     dataManagement: "إدارة ونقل البيانات",
     exportData: "تصدير البيانات (Backup)",
-    importData: "استيراد البيانات (Restore)",
-    importFile: "استيراد الملف",
-    fullExport: "تصدير شامل لكل بيانات البرنامج",
+    importData: "دمج واستيراد (Smart Merge)",
+    importFile: "اختيار ملف الاستيراد",
+    fullExport: "تصدير شامل للنقل",
     exportByTeacher: "تصدير بيانات معلم محدد",
     exportBySchool: "تصدير بيانات مدرسة محددة",
     exportByWorkType: "تصدير حسب نوع العمل",
-    confirmFullExport: "هل أنت متأكد من رغبتك في تصدير نسخة شاملة من كافة بياناتك؟ سيتم حفظ كافة الإعدادات والتقارير.",
-    importWarningTitle: "تحذير هام جداً!",
-    importWarningText: "استيراد البيانات سيؤدي إلى حذف كافة البيانات الحالية في هذا المتصفح واستبدالها ببيانات الملف المرفوع. هل أنت متأكد؟",
-    importSuccess: "تم استيراد البيانات بنجاح! سيتم إعادة تشغيل البرنامج الآن.",
-    importError: "فشل في استيراد الملف. يرجى التأكد من صحة تنسيق الملف.",
+    confirmFullExport: "سيتم إنشاء ملف يحتوي على كافة بياناتك الحالية.",
+    enterSourceName: "يرجى إدخال اسمك (سيظهر للمستلم كمصدر للبيانات):",
+    importConfirmTitle: "تأكيد دمج البيانات الذكي",
+    importConfirmMsg: "تم العثور على بيانات مرسلة من: {user}. تاريخ التصدير: {date}. سيتم إضافة العناصر الجديدة فقط ولن يتم المساس ببياناتك الحالية المعدلة. هل تود المتابعة؟",
+    importSuccess: "تم دمج البيانات الجديدة بنجاح! تم الاحتفاظ بنسخة احتياطية من حالتك السابقة.",
+    importError: "الملف غير صالح أو تالف.",
+    backupCreated: "تم إنشاء نسخة احتياطية تلقائية (Backup # {n})",
     noFileSelected: "يرجى اختيار ملف JSON أولاً.",
     selectTeacher: "اختر المعلم",
     selectSchool: "اختر المدرسة",
     selectWorkType: "اختر نوع العمل",
 
-    // Permissions
+    // ... (rest of the translations keys stay the same)
     permission_all: "كل الصلاحيات (مشرف عام)",
     permission_manage_users: "إدارة المستخدمين",
     permission_change_school: "تغيير المدرسة",
@@ -101,8 +105,6 @@ export const translations = {
     permission_manage_criteria: "إدارة المعايير",
     permission_view_syllabus_coverage: "متابعة المنهج",
     permission_create_self_evaluation: "إنشاء تقييم ذاتي",
-
-    // Features
     syllabusCoverageReport: "تقرير تغطية المنهج",
     evaluationSummary: "ملخص التقييمات",
     selfEvaluation: "التقييم الذاتي",
@@ -126,8 +128,6 @@ export const translations = {
     addTeacher: "إضافة معلم",
     generalEvaluation: "تقييم عام",
     classSessionEvaluation: "تقييم حصة دراسية",
-    
-    // Evaluation Forms
     schoolNameLabel: "المدرسة",
     supervisorNameLabel: "المشرف",
     semesterLabel: "الفصل الدراسي",
@@ -147,15 +147,11 @@ export const translations = {
     usedTools: "الوسائل المستخدمة",
     usedSources: "المصادر المستخدمة",
     implementedPrograms: "البرامج المنفذة",
-    
-    // Score Feedback
     score_0: "لم يظهر/ضعيف جداً",
     score_1: "يحتاج تحسين",
     score_2: "متوسط/جيد",
     score_3: "جيد جداً",
     score_4: "ممتاز/متميز",
-    
-    // Percentage Feedback
     percentage_0_30: "أداء ضعيف يحتاج لتدخل عاجل",
     percentage_31_40: "أداء مقبول مع الحاجة لتحسين كبير",
     percentage_41_60: "أداء متوسط",
@@ -163,11 +159,9 @@ export const translations = {
     percentage_75_80: "أداء جيد جداً",
     percentage_81_89: "أداء ممتاز",
     percentage_90_100: "أداء استثنائي ومتميز",
-
     semester1: "الأول",
     semester2: "الثاني",
     semesterAll: "الكل",
-    
     reportsFor: "تقارير المعلم:",
     noReportsYet: "لا توجد تقارير بعد",
     criterionName: "اسم المعيار",
@@ -181,8 +175,6 @@ export const translations = {
     deleteCriterionTab: "حذف/إخفاء",
     addCriterionTab: "إضافة",
     criterionScope: "نطاق المعيار",
-    
-    // Class Session Specific
     visitTypeLabel: "نوع الزيارة",
     lessonNumberLabel: "رقم الحصة",
     lessonTitleLabel: "عنوان الدرس",
@@ -196,8 +188,6 @@ export const translations = {
     recommendations: "التوصيات",
     employeeComment: "تعليق الموظف",
     generateEmployeeComment: "توليد تعليق",
-    
-    // Self Evaluation
     lastLessonTaken: "آخر درس تم أخذه",
     lessonBranchPlaceholder: "الفرع (مثلاً: نحو)",
     lessonNamePlaceholder: "عنوان الدرس",
@@ -218,8 +208,6 @@ export const translations = {
     assignmentsDone: "التكاليف التي تم القيام بها",
     testsDelivered: "الاختبارات التي تم تسليمها",
     peerVisitsDone: "الزيارات التبادلية التي تمت",
-    
-    // Syllabus Status
     statusAhead: "متقدم",
     statusOnTrack: "مطابق",
     statusBehind: "متأخر",
@@ -230,14 +218,10 @@ export const translations = {
     syllabusStatus_behind: "متأخر بـ",
     syllabusStatus_unit: "درس",
     syllabusStatus_unit_plural: "دروس",
-    
-    // Others
     addNewItem: "إضافة عنصر جديد",
     pasteOrUpload: "ألصق النص أو ارفع ملف",
     processingImport: "جاري المعالجة...",
     fillFields: "تعبئة الحقول",
-    
-    // Syllabus Planner
     syllabusPlan: "خطة المنهج",
     addNewSyllabus: "إضافة خطة منهج",
     noSyllabusPlans: "لا توجد خطط",
@@ -247,8 +231,6 @@ export const translations = {
     savePlan: "حفظ الخطة",
     lessonTitle: "عنوان الدرس",
     plannedDate: "التاريخ المخطط",
-    
-    // Dashboard & Reports
     keyMetrics: "المؤشرات الرئيسية",
     reportSummary: "خلاصة التقارير",
     evaluationElementAnalysis: "تحليل عناصر التقييم",
@@ -305,14 +287,12 @@ export const translations = {
     signed: "تم التوقيع",
     summaryForThisMeeting: "ملخص هذا الاجتماع",
     summaryForAllMeetings: "ملخص جميع الاجتماعات",
-    
     visitingTeacher: "المعلم الزائر",
     visitedTeacher: "المعلم المزور",
     visitingSubject: "مادة الزائر",
     visitingGrade: "صف الزائر",
     visitedSubject: "مادة المزور",
     visitedGrade: "صف المزور",
-    
     sheetName: "اسم الكشف",
     deleteSheet: "حذف الكشف",
     formCount: "العدد",
@@ -320,7 +300,6 @@ export const translations = {
     deliveryDate: "تاريخ التسليم",
     applyToBranch: "تطبيق على الفرع",
     apply: "تطبيق",
-    
     messageText: "نص الرسالة",
     messageRecipient: "مستلم الرسالة",
     sendToAll: "إرسال للكل",
@@ -328,16 +307,12 @@ export const translations = {
     send: "إرسال",
     sentMessagesHistory: "سجل الرسائل المرسلة",
     noMessagesYet: "لا توجد رسائل سابقة",
-    
-    // Supervisory Plan
     generatedTasks: "المهام المولدة",
     executionByDomain: "نسبة التنفيذ حسب المجال",
     addNewSyllabusReport: "إضافة تقرير منهج جديد",
     noSyllabusCoverageReports: "لا توجد تقارير",
     reportTitle: "تقرير {subject} - {grade} - {semester} - {academicYear}",
     saveWork: "حفظ العمل",
-    
-    // Special Reports
     newSpecialReportTemplate: "نموذج تقرير خاص جديد",
     templateName: "اسم النموذج",
     noSpecialTemplates: "لا توجد نماذج خاصة",
@@ -346,13 +321,11 @@ export const translations = {
     sort_date: "التاريخ",
     sort_name: "الاسم",
     sort_subject: "المادة",
-    sort_grade: "الصفوف", // Changed from grade to align with gradesLabel
+    sort_grade: "الصفوف",
     sort_percentage: "النسبة",
     sort_bookmark: "المميز",
     viewReport: "عرض التقرير",
     performancePercentage: "نسبة الأداء",
-
-    // Added keys to resolve errors
     teacherDetails: "تفاصيل المعلم",
     branch: "الفرع",
     subjects: "المواد",
@@ -389,8 +362,6 @@ export const translations = {
     semester: "الفصل الدراسي",
     subject: "المادة",
     grade: "الصف",
-    
-    // Missing Keys
     peerVisits: "الزيارات التبادلية",
     status: "الحالة",
     lastLesson: "آخر درس",
@@ -404,6 +375,7 @@ export const translations = {
     filters: "الفلاتر",
   },
   en: {
+     // ... (en translations stay minimal as requested)
     appTitle: "Your Companion in Writing Reports",
     currentSchool: "Current School",
     academicYear: "Academic Year",
