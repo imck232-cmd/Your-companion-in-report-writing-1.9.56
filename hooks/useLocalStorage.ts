@@ -8,19 +8,23 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
     }
     try {
       const item = window.localStorage.getItem(key);
-      if (!item || item === 'undefined' || item === 'null') return initialValue;
+      
+      // إذا كانت القيمة فارغة أو غير معرفة نصياً، نرجع القيمة الابتدائية
+      if (!item || item === 'undefined' || item === 'null') {
+        return initialValue;
+      }
       
       const parsed = JSON.parse(item);
       
-      // حماية صارمة: إذا كنا نتوقع مصفوفة وحصلنا على شيء آخر، نرجع المصفوفة الابتدائية فوراً
+      // حماية إضافية للمصفوفات: إذا كان المتوقع مصفوفة والناتج ليس كذلك، نرفض القيمة
       if (Array.isArray(initialValue) && !Array.isArray(parsed)) {
-        console.warn(`LocalStorage Key "${key}" expected Array but got something else. Resetting to initialValue.`);
+        console.warn(`[Storage Shield] Key "${key}" reset to default (Type mismatch).`);
         return initialValue;
       }
       
       return parsed;
     } catch (error) {
-      console.error(`Error loading localStorage key "${key}":`, error);
+      console.error(`[Storage Error] Key "${key}":`, error);
       return initialValue;
     }
   });
@@ -28,12 +32,19 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
+        // منع تخزين القيم التالفة التي تسبب انهيار التطبيق
+        if (storedValue === undefined || storedValue === null) {
+          if (!Array.isArray(initialValue)) {
+             window.localStorage.removeItem(key);
+          }
+          return;
+        }
         window.localStorage.setItem(key, JSON.stringify(storedValue));
       }
     } catch (error) {
-      console.error(`Error saving localStorage key "${key}":`, error);
+      console.error(`[Storage Save Error] Key "${key}":`, error);
     }
-  }, [key, storedValue]);
+  }, [key, storedValue, initialValue]);
 
   return [storedValue, setStoredValue];
 }
