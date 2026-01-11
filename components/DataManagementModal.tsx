@@ -55,7 +55,10 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && !key.startsWith('backup_') && !key.startsWith('dm_')) {
-                try { currentData[key] = JSON.parse(localStorage.getItem(key) || 'null'); } 
+                try { 
+                    const val = localStorage.getItem(key);
+                    currentData[key] = val ? JSON.parse(val) : null; 
+                } 
                 catch { currentData[key] = localStorage.getItem(key); }
             }
         }
@@ -109,7 +112,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             sourceUser: sourceName,
             timestamp: Date.now(),
             payload: payload,
-            formatVersion: "2.1"
+            formatVersion: "2.2"
         };
 
         const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
@@ -136,7 +139,6 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                 if (parsed.payload && parsed.sourceUser) {
                     setPendingImport(parsed);
                 } else {
-                    // تحويل النسق القديم لنفس معالجة النسق الجديد
                     setPendingImport({
                         sourceUser: "نسخة احتياطية سابقة",
                         timestamp: Date.now(),
@@ -160,22 +162,22 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
             // 1. أخذ نسخة احتياطية للسلامة
             createBackup();
 
-            // 2. معالجة البيانات
             const payload = pendingImport.payload;
 
             if (importMode === 'replace') {
-                // وضع الاستبدال: نقوم بمسح المفاتيح المدارة فقط مع حماية بيانات الدخول
+                // وضع الاستبدال الشامل مع حماية الهوية الحالية
                 keysToManage.forEach(key => {
                     if (payload[key]) {
-                        // التحقق من صحة المصفوفات لمنع انهيار الواجهة
-                        const valueToSave = Array.isArray(payload[key]) ? payload[key] : (typeof payload[key] === 'object' ? payload[key] : []);
-                        localStorage.setItem(key, JSON.stringify(valueToSave));
+                        // التأكد أن البيانات مصفوفة وليست كائن تالف يسبب شاشة بيضاء
+                        const val = payload[key];
+                        const sanitizedValue = Array.isArray(val) ? val : [];
+                        localStorage.setItem(key, JSON.stringify(sanitizedValue));
                     }
                 });
             } else {
-                // وضع الدمج التكميلي
+                // وضع الدمج التكميلي (Append)
                 Object.entries(payload).forEach(([key, importedValue]) => {
-                    if (!keysToManage.includes(key)) return; // تجاهل أي مفاتيح غير رسمية
+                    if (!keysToManage.includes(key)) return;
 
                     const localRaw = localStorage.getItem(key);
                     let localValue: any;
@@ -183,16 +185,29 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
 
                     if (Array.isArray(importedValue)) {
                         const localItems = Array.isArray(localValue) ? localValue : [];
-                        const localIds = new Set(localItems.map((item: any) => item?.id).filter(Boolean));
                         
-                        // إضافة العناصر ذات المعرفات الجديدة فقط
-                        const newUniqueItems = importedValue.filter((item: any) => 
-                            item && item.id && !localIds.has(item.id)
-                        );
+                        let filteredImported;
+                        if (key === 'teachers') {
+                            // الاستبعاد الذكي للمعلمين: التحقق بالـ ID وبالاسم لمنع التكرار
+                            const localIds = new Set(localItems.map((item: any) => item?.id).filter(Boolean));
+                            const localNames = new Set(localItems.map((item: any) => item?.name?.trim()).filter(Boolean));
+                            
+                            filteredImported = importedValue.filter((item: any) => {
+                                if (!item || !item.name) return false;
+                                const isIdDup = localIds.has(item.id);
+                                const isNameDup = localNames.has(item.name.trim());
+                                return !isIdDup && !isNameDup; // إضافة فقط إذا لم يكن موجوداً لا بالاسم ولا بالكود
+                            });
+                        } else {
+                            // للباقي: التحقق بالـ ID فقط
+                            const localIds = new Set(localItems.map((item: any) => item?.id).filter(Boolean));
+                            filteredImported = importedValue.filter((item: any) => 
+                                item && item.id && !localIds.has(item.id)
+                            );
+                        }
                         
-                        localStorage.setItem(key, JSON.stringify([...localItems, ...newUniqueItems]));
+                        localStorage.setItem(key, JSON.stringify([...localItems, ...filteredImported]));
                     } else if (localValue === null || localValue === undefined) {
-                        // للإعدادات المفردة: تعبئتها فقط إذا كانت فارغة محلياً
                         localStorage.setItem(key, JSON.stringify(importedValue));
                     }
                 });
@@ -200,8 +215,8 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
 
             setIsImporting(false);
             alert(t('importSuccess'));
-            // إعادة التشغيل لتطبيق الحالة الجديدة بالكامل
-            window.location.href = window.location.origin + window.location.pathname;
+            // إعادة التشغيل النظيف
+            window.location.reload();
         } catch (err) {
             console.error("Import Execution Error:", err);
             setIsImporting(false);
@@ -217,7 +232,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                 <div className="flex justify-between items-center border-b p-6 bg-gray-50">
                     <div>
                         <h2 className="text-2xl font-bold text-primary">{t('dataManagement')}</h2>
-                        <p className="text-xs text-gray-500 mt-1">تصدير ذكي ونظام أرشفة آمن</p>
+                        <p className="text-xs text-gray-500 mt-1">نظام الاستبعاد الذكي للمعلمين المكررين (Smart Duplicate Filter)</p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-full">
                         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -290,7 +305,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose }) =>
                                 <div className="flex flex-col items-center pointer-events-none">
                                     <svg className="w-12 h-12 text-indigo-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                                     <p className="mt-4 font-bold text-indigo-800">{t('importFile')}</p>
-                                    <p className="text-[10px] text-indigo-500 mt-1">يدعم الاستبدال الشامل أو الدمج التكميلي</p>
+                                    <p className="text-[10px] text-indigo-500 mt-1">يتم استبعاد المعلمين المكررين بالاسم أو الكود تلقائياً</p>
                                 </div>
                             </div>
                         ) : (
